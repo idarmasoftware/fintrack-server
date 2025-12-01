@@ -4,6 +4,9 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER, WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { ValidationPipe } from '@nestjs/common';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -12,6 +15,17 @@ async function bootstrap() {
   });
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
   const configService = app.get(ConfigService);
   const logger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
