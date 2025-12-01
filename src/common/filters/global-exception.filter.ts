@@ -7,9 +7,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express'; // Tambahkan Request
+import { SlackService } from '../slack/slack.service'; // Import SlackService
 
-// --- TYPE Definitions ---
+// ... (Interface definitions tetap sama) ...
 interface ValidationErrorResponse {
   statusCode: number;
   message: string[];
@@ -24,27 +25,33 @@ interface CustomExceptionResponse {
 
 type ErrorResponse = ValidationErrorResponse | CustomExceptionResponse | string;
 
-// --- GLOBAL FILTER ---
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
+  // 1. Tambahkan constructor untuk menerima SlackService
+  constructor(private readonly slackService: SlackService) {}
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>(); // Ambil request untuk info URL/Method
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let errors: string[] | Record<string, unknown>[] | null = null;
 
+    // ... (Logika penanganan BadRequestException dan HttpException tetap sama) ...
+    // ... (Kode bagian 1️⃣ dan 2️⃣ biarkan seperti semula) ...
+
     // =========================================
-    // 1️⃣ VALIDATION ERROR (class-validator + class-transformer)
+    // 1️⃣ VALIDATION ERROR
     // =========================================
     if (exception instanceof BadRequestException) {
+      // ... (kode lama Anda)
       const res = exception.getResponse() as ErrorResponse;
       status = HttpStatus.BAD_REQUEST;
-
-      // ValidationPipe → { statusCode, message: string[] }
+      // ... copy logic lama ...
       if (
         typeof res === 'object' &&
         'message' in res &&
@@ -52,62 +59,65 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ) {
         message = 'Validation error';
         errors = (res as ValidationErrorResponse).message;
-      }
-
-      // Custom BadRequestException → { message: string }
-      else if (typeof res === 'object' && typeof res.message === 'string') {
+      } else if (typeof res === 'object' && typeof res.message === 'string') {
         message = res.message;
       }
-
-      return response.status(status).json({
-        success: false,
-        message,
-        errors,
-      });
     }
 
     // =========================================
-    // 2️⃣ HTTP EXCEPTION (Business Error, Custom Error)
+    // 2️⃣ HTTP EXCEPTION
     // =========================================
-    if (exception instanceof HttpException) {
+    else if (exception instanceof HttpException) {
+      // ... (kode lama Anda)
       status = exception.getStatus();
-
       const res = exception.getResponse() as ErrorResponse;
 
       if (typeof res === 'string') {
         message = res;
       } else if (typeof res === 'object' && res !== null) {
         const r = res as CustomExceptionResponse;
-
         if (r.message) message = r.message;
         if (r.errors) errors = r.errors;
       }
-
-      return response.status(status).json({
-        success: false,
-        message,
-        errors,
-      });
     }
 
     // =========================================
-    // 3️⃣ UNEXPECTED ERROR (Bug, runtime error)
+    // 3️⃣ UNEXPECTED ERROR & SLACK NOTIFICATION
     // =========================================
     if (exception instanceof Error) {
-      this.logger.error(exception.message, exception.stack);
+      // Jika bukan HttpException (artinya error codingan/crash), atau statusnya 500
+      if (!(exception instanceof HttpException) || status === HttpStatus.INTERNAL_SERVER_ERROR) {
+        this.logger.error(exception.message, exception.stack);
 
-      return response.status(status).json({
-        success: false,
-        message: exception.message ?? message,
-      });
+        // Kirim ke Slack secara Asynchronous (jangan await agar tidak memblokir response user)
+        this.sendToSlack(exception, request, status);
+
+        // Update message jika belum terset
+        if (!(exception instanceof HttpException)) {
+          message = exception.message ?? message;
+        }
+      }
     }
 
-    // =========================================
-    // 4️⃣ Fallback (unknown error)
-    // =========================================
-    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+    return response.status(status).json({
       success: false,
-      message: 'Unknown error occurred',
+      message: message === 'Internal server error' ? 'Internal server error' : message, // Safety mask
+      errors,
     });
+  }
+
+  // Fungsi helper untuk format pesan Slack
+  private sendToSlack(exception: Error, request: Request, status: number) {
+    const text = `
+    🚨 *Critical Error Detected* 🚨
+    *Status:* ${status}
+    *Method:* ${request.method}
+    *URL:* ${request.url}
+    *IP:* ${request.ip}
+    *Message:* ${exception.message}
+    *Stack Trace:* \`\`\`${exception.stack?.substring(0, 1000)}\`\`\`
+    `;
+    // Panggil service (gunakan .catch agar jika slack error, aplikasi tidak crash)
+    this.slackService.send(text).catch((err) => this.logger.error('Failed to send to slack', err));
   }
 }

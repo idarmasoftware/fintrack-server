@@ -7,6 +7,7 @@ import { Logger } from 'winston';
 import { ValidationPipe } from '@nestjs/common';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { SlackService } from './common/slack/slack.service'; // Import SlackService
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -24,7 +25,14 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  // === PERUBAHAN DI SINI ===
+  // 1. Ambil instance SlackService dari container aplikasi
+  const slackService = app.get(SlackService);
+
+  // 2. Masukkan ke dalam GlobalExceptionFilter
+  app.useGlobalFilters(new GlobalExceptionFilter(slackService));
+  // ==========================
+
   app.useGlobalInterceptors(new ResponseInterceptor());
 
   const configService = app.get(ConfigService);

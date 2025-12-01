@@ -14,4 +14,9 @@ export class CommonController {
   getUuid(): Record<string, string> {
     return this.commonService.getUuid();
   }
+
+  @Get('debug-slack')
+  testSlackError() {
+    throw new Error('Ini adalah simulasi error untuk mengetes notifikasi Slack!');
+  }
 }
