@@ -33,5 +33,6 @@ import { winstonConfig } from './config/winston.config';
     }),
   ],
   exports: [TypeOrmModule],
+  controllers: [],
 })
 export class CoreModule {}

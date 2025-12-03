@@ -2,7 +2,6 @@ import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
-import { v7 as uuidv7 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -36,7 +35,6 @@ export class UserService {
 
     // 4. Buat Instance User
     const newUser = this.userRepository.create({
-      id: uuidv7(),
       username: createUserDto.username,
       password: hashedPassword,
     });
@@ -68,7 +66,7 @@ export class UserService {
   }
 
   findOne(id: string) {
-    return `This action returns a #${id} user`;
+    return this.userRepository.findOneBy({ id });
   }
 
   findByUsername(username: string) {
