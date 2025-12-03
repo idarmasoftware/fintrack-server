@@ -11,7 +11,6 @@ import { SlackService } from './common/slack/slack.service'; // Import SlackServ
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: false,
     cors: true,
   });
 

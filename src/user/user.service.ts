@@ -71,6 +71,10 @@ export class UserService {
     return `This action returns a #${id} user`;
   }
 
+  findByUsername(username: string) {
+    return this.userRepository.findOneBy({ username: username });
+  }
+
   update(id: string) {
     return `This action updates a #${id} user`;
   }

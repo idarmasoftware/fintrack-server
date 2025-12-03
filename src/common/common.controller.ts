@@ -1,5 +1,14 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { CommonService } from './common.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller()
 export class CommonController {
@@ -18,5 +27,17 @@ export class CommonController {
   @Get('debug-slack')
   testSlackError() {
     throw new Error('Ini adalah simulasi error untuk mengetes notifikasi Slack!');
+  }
+
+  @Post('upload')
+  @HttpCode(200)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('file is required');
+    }
+    return {
+      file: file?.originalname,
+    };
   }
 }

@@ -1,7 +1,11 @@
-import { Controller, Get, Inject, Ip, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Ip, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { type UserPayload } from './interfaces/user-payload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -21,12 +25,13 @@ export class AuthController {
   }
 
   @Post('login')
-  login() {
-    return this.authService.login();
+  login(@Body() dto: LoginDto, @Ip() ip: string) {
+    return this.authService.login(dto, ip);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('profile')
-  profile() {
-    return this.authService.profile();
+  profile(@CurrentUser() user: UserPayload) {
+    return user;
   }
 }

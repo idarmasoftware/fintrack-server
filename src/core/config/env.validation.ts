@@ -12,4 +12,5 @@ export const envValidationSchema = Joi.object({
   MARIADB_NAME: Joi.string().required(),
 
   SLACK_WEBHOOK_URL: Joi.string().required(),
+  JWT_SECRET_KEY: Joi.string().required(),
 });
