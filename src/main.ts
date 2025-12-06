@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
@@ -11,7 +12,11 @@ import { SlackService } from './common/slack/slack.service'; // Import SlackServ
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    cors: true,
+    cors: {
+      origin: ['http://localhost:3000'],
+      credentials: true,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    },
   });
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
@@ -37,6 +42,8 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const logger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
   const port: number = configService.getOrThrow<number>('app.port');
+
+  app.use(cookieParser());
 
   await app.listen(port);
   logger.info(`Application running on port: ${port}`, {

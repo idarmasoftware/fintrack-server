@@ -1,6 +1,7 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { v7 as uuidv7 } from 'uuid';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 import * as bcrypt from 'bcrypt';
@@ -89,8 +90,18 @@ export class UserService {
     return true;
   }
 
-  update(id: string) {
-    return `This action updates a #${id} user`;
+  async updateRefreshToken(userId: string, refreshToken: string | null) {
+    await this.userRepository.update(userId, { refresh_token: refreshToken });
+  }
+
+  // Method to update user details
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt();
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+    await this.userRepository.update(id, updateUserDto);
+    return this.findOne(id);
   }
 
   remove(id: string) {

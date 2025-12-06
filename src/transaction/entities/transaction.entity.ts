@@ -44,7 +44,7 @@ export class Transaction {
   @Column({ type: 'enum', enum: TransactionType })
   type: TransactionType;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0 })
   amount: number;
 
   @Column({ type: 'text', nullable: true })

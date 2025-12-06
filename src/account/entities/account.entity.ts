@@ -23,7 +23,7 @@ export class Account {
   @Column()
   name: string;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0 })
   balance: number;
 
   @Column()

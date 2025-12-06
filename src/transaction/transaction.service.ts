@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, Between } from 'typeorm';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction } from './entities/transaction.entity';
 import { Account } from '../account/entities/account.entity';
 import { UserPayload } from '../auth/interfaces/user-payload.interface';
@@ -13,7 +14,7 @@ export class TransactionService {
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
     private readonly dataSource: DataSource, // Untuk transaction management
-  ) {}
+  ) { }
 
   async create(user: UserPayload, dto: CreateTransactionDto) {
     // Mulai Query Runner (Database Transaction Session)
@@ -77,11 +78,149 @@ export class TransactionService {
     }
   }
 
-  async findAll(user: UserPayload) {
+  async findOne(id: string, user: UserPayload) {
+    return this.transactionRepository.findOne({
+      where: { id, user_id: user.id },
+      relations: ['category', 'account'],
+    });
+  }
+
+  async update(id: string, user: UserPayload, dto: UpdateTransactionDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Get existing transaction
+      const existingTransaction = await queryRunner.manager.findOne(Transaction, {
+        where: { id, user_id: user.id },
+        relations: ['account'],
+      });
+
+      if (!existingTransaction) throw new NotFoundException('Transaction not found');
+
+      // 2. Revert Old Balance
+      const oldAccount = await queryRunner.manager.findOne(Account, {
+        where: { id: existingTransaction.account_id },
+      });
+
+      if (!oldAccount) throw new NotFoundException('Account linked to this transaction not found');
+
+      if (existingTransaction.type === TransactionType.EXPENSE) {
+        oldAccount.balance = Number(oldAccount.balance) + Number(existingTransaction.amount);
+      } else {
+        oldAccount.balance = Number(oldAccount.balance) - Number(existingTransaction.amount);
+      }
+      await queryRunner.manager.save(oldAccount);
+
+      // 3. Prepare New Data (Merge DTO)
+      // Note: If account_id changed, we need to handle that. simpler if we forbid account change?
+      // For now, let's assume account MIGHT change.
+      const targetAccountId = dto.account_id || existingTransaction.account_id;
+
+      // 4. Apply New Balance
+      // Fetch target account (might be same as oldAccount)
+      const targetAccount = await queryRunner.manager.findOne(Account, {
+        where: { id: targetAccountId, user_id: user.id },
+      });
+      if (!targetAccount) throw new NotFoundException('Target account not found');
+
+      const amountToApply = Number(dto.amount ?? existingTransaction.amount);
+      const typeToApply = dto.type ?? existingTransaction.type;
+
+      if (typeToApply === TransactionType.EXPENSE) {
+        if (Number(targetAccount.balance) < amountToApply) {
+          throw new BadRequestException('Saldo tidak mencukupi untuk update transaksi ini');
+        }
+        targetAccount.balance = Number(targetAccount.balance) - amountToApply;
+      } else {
+        targetAccount.balance = Number(targetAccount.balance) + amountToApply;
+      }
+      await queryRunner.manager.save(targetAccount);
+
+      // 5. Update Transaction Record
+      Object.assign(existingTransaction, dto);
+      const updatedTransaction = await queryRunner.manager.save(existingTransaction);
+
+      await queryRunner.commitTransaction();
+      return updatedTransaction;
+
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async remove(id: string, user: UserPayload) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const transaction = await queryRunner.manager.findOne(Transaction, {
+        where: { id, user_id: user.id },
+        relations: ['account']
+      });
+
+      if (!transaction) throw new NotFoundException('Transaction not found');
+
+      // Revert Balance
+      const account = await queryRunner.manager.findOne(Account, {
+        where: { id: transaction.account_id },
+      });
+
+      if (account) {
+        if (transaction.type === TransactionType.EXPENSE) {
+          account.balance = Number(account.balance) + Number(transaction.amount);
+        } else {
+          account.balance = Number(account.balance) - Number(transaction.amount);
+        }
+        await queryRunner.manager.save(account);
+      }
+
+      // Delete (Soft Remove)
+      await queryRunner.manager.softRemove(transaction);
+
+      await queryRunner.commitTransaction();
+      return { message: 'Transaction deleted successfully' };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+  async findAll(
+    user: UserPayload,
+    filters?: { startDate?: string; endDate?: string; categoryId?: string; accountId?: string },
+  ) {
+    const where: any = { user_id: user.id };
+
+    if (filters?.categoryId) {
+      where.category_id = filters.categoryId;
+    }
+
+    if (filters?.accountId) {
+      where.account_id = filters.accountId;
+    }
+
+    if (filters?.startDate && filters?.endDate) {
+      // Set time to start of day and end of day respectively
+      const start = new Date(filters.startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(filters.endDate);
+      end.setHours(23, 59, 59, 999);
+
+      where.date_created = Between(start, end);
+    }
+
     return this.transactionRepository.find({
-      where: { user_id: user.id },
+      where,
       order: { date_created: 'DESC' },
-      relations: ['category', 'account'], // Load detail kategori & akun
+      relations: ['category', 'account'],
     });
   }
 }
