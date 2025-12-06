@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, Between } from 'typeorm';
+import { DataSource, Repository, Between, ILike } from 'typeorm';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction } from './entities/transaction.entity';
@@ -194,8 +194,20 @@ export class TransactionService {
   }
   async findAll(
     user: UserPayload,
-    filters?: { startDate?: string; endDate?: string; categoryId?: string; accountId?: string },
+    filters?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      startDate?: string;
+      endDate?: string;
+      categoryId?: string;
+      accountId?: string
+    },
   ) {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const skip = (page - 1) * limit;
+
     const where: any = { user_id: user.id };
 
     if (filters?.categoryId) {
@@ -204,6 +216,10 @@ export class TransactionService {
 
     if (filters?.accountId) {
       where.account_id = filters.accountId;
+    }
+
+    if (filters?.search) {
+      where.description = ILike(`%${filters.search}%`);
     }
 
     if (filters?.startDate && filters?.endDate) {
@@ -217,10 +233,21 @@ export class TransactionService {
       where.date_created = Between(start, end);
     }
 
-    return this.transactionRepository.find({
+    const [data, total] = await this.transactionRepository.findAndCount({
       where,
       order: { date_created: 'DESC' },
       relations: ['category', 'account'],
+      take: limit,
+      skip: skip,
     });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        last_page: Math.ceil(total / limit),
+      },
+    };
   }
 }

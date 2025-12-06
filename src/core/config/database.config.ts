@@ -8,4 +8,5 @@ export default registerAs('database', () => ({
   password: process.env.MARIADB_PASS,
   database: process.env.MARIADB_NAME,
   synchronize: process.env.NODE_ENV !== 'production',
+  timezone: '+07:00',
 }));

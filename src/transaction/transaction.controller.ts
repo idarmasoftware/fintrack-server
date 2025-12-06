@@ -19,12 +19,15 @@ export class TransactionController {
   @Get()
   findAll(
     @CurrentUser() user: UserPayload,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
     @Query('category_id') categoryId?: string,
     @Query('account_id') accountId?: string,
   ) {
-    return this.transactionService.findAll(user, { startDate, endDate, categoryId, accountId });
+    return this.transactionService.findAll(user, { page, limit, search, startDate, endDate, categoryId, accountId });
   }
 
   @Get(':id')
