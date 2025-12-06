@@ -18,11 +18,20 @@ export class User {
   @PrimaryColumn('uuid')
   id: string;
 
+  @Column({ type: 'varchar', length: 100 })
+  full_name: string;
+
   @Column({ type: 'varchar', length: 100, unique: true })
-  username: string;
+  email: string;
 
   @Column({ type: 'text' })
   password: string;
+
+  @Column({ default: false })
+  is_active: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  activation_token: string | null;
 
   @OneToMany(() => Account, (account) => account.user)
   accounts: Account[];

@@ -1,14 +1,14 @@
-import { IsNotEmpty, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength, MaxLength, Matches, IsEmail } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
-  @MinLength(4)
-  @MaxLength(20)
-  @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message: 'Username hanya boleh berisi huruf, angka, garis bawah (_), dan strip (-)',
-  })
-  username: string;
+  full_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
 
   @IsString()
   @IsNotEmpty()

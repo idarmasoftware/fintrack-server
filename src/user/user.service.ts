@@ -1,4 +1,5 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { v7 as uuidv7 } from 'uuid';
 import { CreateUserDto } from './dto/create-user.dto';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
@@ -14,18 +15,18 @@ export class UserService {
     private readonly logger: Logger,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(createUserDto: CreateUserDto) {
     const existingUser = await this.userRepository.findOne({
       where: {
-        username: createUserDto.username,
+        email: createUserDto.email,
       },
       withDeleted: true,
     });
 
     if (existingUser) {
-      throw new ConflictException('Username sudah digunakan');
+      throw new ConflictException('Email sudah digunakan');
     }
 
     // 3. Hashing Password
@@ -35,8 +36,11 @@ export class UserService {
 
     // 4. Buat Instance User
     const newUser = this.userRepository.create({
-      username: createUserDto.username,
+      full_name: createUserDto.full_name,
+      email: createUserDto.email,
       password: hashedPassword,
+      activation_token: uuidv7(),
+      is_active: false,
     });
 
     // 5. Simpan ke DB
@@ -46,7 +50,7 @@ export class UserService {
     this.logger.info('Success create a new user', {
       context: 'UserService',
       user_id: savedUser.id,
-      username: savedUser.username,
+      email: savedUser.email,
     });
 
     return savedUser;
@@ -57,7 +61,8 @@ export class UserService {
       withDeleted: true,
       select: {
         id: true,
-        username: true,
+        full_name: true,
+        email: true,
         date_created: true,
         date_modified: true,
       },
@@ -69,8 +74,19 @@ export class UserService {
     return this.userRepository.findOneBy({ id });
   }
 
-  findByUsername(username: string) {
-    return this.userRepository.findOneBy({ username: username });
+  findByEmail(email: string) {
+    return this.userRepository.findOneBy({ email: email });
+  }
+
+  async activateUser(token: string) {
+    const user = await this.userRepository.findOneBy({ activation_token: token });
+    if (!user) {
+      return false;
+    }
+    user.is_active = true;
+    user.activation_token = null;
+    await this.userRepository.save(user);
+    return true;
   }
 
   update(id: string) {
