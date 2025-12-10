@@ -36,6 +36,12 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   refresh_token: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  new_email: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  email_verification_token: string | null;
+
   @OneToMany(() => Account, (account) => account.user)
   accounts: Account[];
 

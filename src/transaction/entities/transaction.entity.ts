@@ -2,11 +2,11 @@ import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
+  UpdateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
-  UpdateDateColumn,
   BeforeInsert,
 } from 'typeorm';
 import { v7 as uuidv7 } from 'uuid';
@@ -27,10 +27,10 @@ export class Transaction {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column()
+  @Column({ nullable: true })
   category_id: string;
 
-  @ManyToOne(() => Category, (category) => category.transactions)
+  @ManyToOne(() => Category, (category) => category.transactions, { nullable: true })
   @JoinColumn({ name: 'category_id' })
   category: Category;
 

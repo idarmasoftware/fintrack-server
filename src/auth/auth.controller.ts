@@ -85,6 +85,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async profile(@CurrentUser() user: UserPayload) {
-    return this.userService.findOne(user.id);
+    const data = await this.userService.findOne(user.id);
+    return {
+      message: 'Profile retrieved',
+      data,
+    };
   }
 }
