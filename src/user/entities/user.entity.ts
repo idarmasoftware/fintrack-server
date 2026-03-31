@@ -33,6 +33,9 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   activation_token: string | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  activation_token_expires: Date | null;
+
   @Column({ type: 'varchar', nullable: true })
   refresh_token: string | null;
 

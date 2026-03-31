@@ -1,5 +1,6 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { v7 as uuidv7 } from 'uuid';
+import * as crypto from 'crypto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
@@ -40,12 +41,17 @@ export class UserService {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const activationToken = crypto.randomBytes(32).toString('hex');
+    const activationExpires = new Date();
+    activationExpires.setHours(activationExpires.getHours() + 24); // 24 hours from now
+
     // 4. Buat Instance User
     const newUser = this.userRepository.create({
       full_name: createUserDto.full_name,
       email: createUserDto.email,
       password: hashedPassword,
-      activation_token: uuidv7(),
+      activation_token: activationToken,
+      activation_token_expires: activationExpires,
       is_active: false,
     });
 
@@ -89,8 +95,15 @@ export class UserService {
     if (!user) {
       return false;
     }
+
+    if (user.activation_token_expires && user.activation_token_expires < new Date()) {
+      // Token expired
+      return false;
+    }
+
     user.is_active = true;
     user.activation_token = null;
+    user.activation_token_expires = null;
     await this.userRepository.save(user);
     return true;
   }

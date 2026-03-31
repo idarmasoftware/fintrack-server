@@ -6,7 +6,10 @@ export class MailService {
     constructor(private mailerService: MailerService) { }
 
     async sendUserConfirmation(user: any, token: string) {
-        const url = `http://localhost:3000/auth/activate?token=${token}`;
+        // NOTE: This must point to the BACKEND server because the backend handles the activation logic and redirects to the frontend.
+        // Assuming Backend runs on port 5000 by default (as seen in main.ts).
+        const domain = process.env.BACKEND_URL || 'http://localhost:3004';
+        const url = `${domain}/auth/activate?token=${token}`;
 
         await this.mailerService.sendMail({
             to: user.email,
@@ -23,7 +26,7 @@ export class MailService {
     }
 
     async sendEmailChangeConfirmation(user: any, token: string) {
-        const url = `http://localhost:3000/user/verify-email-change?token=${token}`;
+        const url = `http://localhost:3004/user/verify-email-change?token=${token}`;
 
         await this.mailerService.sendMail({
             to: user.new_email,

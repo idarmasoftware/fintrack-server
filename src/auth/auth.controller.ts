@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Inject, Ip, Post, UseGuards, Query, Res, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Ip,
+  Post,
+  UseGuards,
+  Query,
+  Res,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
@@ -18,7 +30,7 @@ export class AuthController {
     private readonly logger: Logger,
     private readonly authService: AuthService,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   @Post('register')
   register(@Body() dto: CreateUserDto, @Ip() ip: string) {
@@ -75,10 +87,12 @@ export class AuthController {
   @Get('activate')
   async activate(@Query('token') token: string, @Res() res: Response) {
     const success = await this.userService.activateUser(token);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
     if (success) {
-      return res.status(200).json({ message: 'User activated successfully' });
+      return res.redirect(`${frontendUrl}/activation/success`);
     } else {
-      throw new UnauthorizedException('Invalid or expired activation token');
+      return res.redirect(`${frontendUrl}/activation?status=failed&message=InvalidOrExpiredToken`);
     }
   }
 

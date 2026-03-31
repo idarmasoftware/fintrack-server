@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  Res,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { TransactionService } from './transaction.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -11,7 +22,7 @@ import { type UserPayload } from '../auth/interfaces/user-payload.interface';
 @UseGuards(JwtAuthGuard)
 @Controller('transaction')
 export class TransactionController {
-  constructor(private readonly transactionService: TransactionService) { }
+  constructor(private readonly transactionService: TransactionService) {}
 
   @Post()
   create(@CurrentUser() user: UserPayload, @Body() createTransactionDto: CreateTransactionDto) {
@@ -61,7 +72,15 @@ export class TransactionController {
     @Query('category_id') categoryId?: string,
     @Query('account_id') accountId?: string,
   ) {
-    return this.transactionService.findAll(user, { page, limit, search, startDate, endDate, categoryId, accountId });
+    return this.transactionService.findAll(user, {
+      page,
+      limit,
+      search,
+      startDate,
+      endDate,
+      categoryId,
+      accountId,
+    });
   }
 
   @Get(':id')
