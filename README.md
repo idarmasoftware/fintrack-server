@@ -20,17 +20,20 @@ Dengan pendekatan data-driven dan AI-assisted insight, FinTrack bertujuan menjad
 ## 🛠 Tech Stack
 
 ### Web App (Client)
+
 - **Framework:** [Vuejs](https://vuejs.org/) (TypeScript)
 - **Styling:** [Tailwindcss](https://tailwindcss.com/)
 - **State Management:** Pinia
 
 ### Mobile App (Client)
+
 - **Framework:** [Flutter](https://flutter.dev/) (Dart)
 - **State Management:** BLoC / Riverpod
 - **Local DB:** SQLite / Drift (Offline-first architecture)
 - **Charts:** Fl_chart
 
 ### Backend API (Server)
+
 - **Framework:** [NestJS](https://nestjs.com/) (TypeScript)
 - **Runtime:** [Node.js](https://nodejs.org/)
 - **Database:** MariaDB LTS
@@ -41,7 +44,9 @@ Dengan pendekatan data-driven dan AI-assisted insight, FinTrack bertujuan menjad
 ## 🚀 Cara Menjalankan (Getting Started)
 
 ### Prasyarat
+
 Pastikan Anda telah menginstal:
+
 - Node.js (v22+)
 - Flutter SDK (v3.0+)
 - MariaDB LTS
@@ -65,3 +70,4 @@ docker-compose up -d --build
 
 # Jalankan server (Development)
 npm run start:dev
+```
